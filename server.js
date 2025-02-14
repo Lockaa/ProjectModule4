@@ -14,7 +14,7 @@ const users = [
   {
     id: 1,
     username: 'user1',
-    password: '$2a$10$wIAdFNVqL6DFPkk3z8ZKe/tS0PZm5UeF9cAOpL2wAfAzOV5PAuGMy', // 'password123'
+    password: 'password1',
   }
 ];
 
