@@ -17,7 +17,8 @@
     2/14/2025:
     started & filled in README file                             14:00 - 14:20
     re-researched & re-studied JWT                              14:20 - 14:50
-    set up express & node.js server                             15:00 - 15:30
+    set up express & node.js server                             15:00 - 15:20
+    have basic JWL template in                                  15:20 - 15:45
 
 
 # Challenges: 
