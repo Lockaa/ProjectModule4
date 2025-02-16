@@ -1,71 +1,64 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const bodyParser = require('body-parser');
+const dotenv = require('dotenv');
+const { authenticateJWT } = require('./auth');
+
+dotenv.config();
 
 const app = express();
-const port = 3000;
+app.use(express.json()); // for parsing JSON payloads
 
-// Middleware
-app.use(bodyParser.json());
+const users = []; // In-memory user storage for simplicity
 
-// Simulated Database (usually you'd have an actual database)
-const users = [
-  {
-    id: 1,
-    username: 'user1',
-    password: 'password1',
+// Register a user
+app.post('/register', async (req, res) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.status(400).send('Username and password are required');
   }
-];
 
-// Secret key for signing JWT
-const SECRET_KEY = 'your-secret-key';
+  // Hash the password before storing it
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const user = { username, password: hashedPassword };
+  users.push(user);
 
-// Login Route
-app.post('/login', (req, res) => {
+  res.status(201).send('User registered');
+});
+
+// Login route to authenticate the user and return a JWT
+app.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
-  // Check if user exists
+  if (!username || !password) {
+    return res.status(400).send('Username and password are required');
+  }
+
   const user = users.find(u => u.username === username);
+  
   if (!user) {
-    return res.status(401).send('User not found');
+    return res.status(401).send('Invalid credentials');
   }
 
-  // Verify password
-  bcrypt.compare(password, user.password, (err, isMatch) => {
-    if (err) throw err;
+  const validPassword = await bcrypt.compare(password, user.password);
 
-    if (isMatch) {
-      // Create a JWT token
-      const token = jwt.sign({ userId: user.id, username: user.username }, SECRET_KEY, { expiresIn: '1h' });
-
-      return res.json({ token });
-    } else {
-      return res.status(401).send('Invalid password');
-    }
-  });
-});
-
-// Protected Route
-app.get('/profile', (req, res) => {
-  // Get the token from the Authorization header
-  const token = req.headers['authorization']?.split(' ')[1]; // Expecting "Bearer <token>"
-
-  if (!token) {
-    return res.status(403).send('No token provided');
+  if (!validPassword) {
+    return res.status(401).send('Invalid credentials');
   }
 
-  // Verify the token
-  jwt.verify(token, SECRET_KEY, (err, decoded) => {
-    if (err) {
-      return res.status(401).send('Invalid token');
-    }
-
-    // Access granted to protected route
-    res.json({ message: 'Welcome to your profile', user: decoded });
-  });
+  // Generate a JWT token
+  const token = jwt.sign({ username }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRATION });
+  res.json({ token });
 });
 
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+// Protected route
+app.get('/protected', authenticateJWT, (req, res) => {
+  res.send('This is a protected route, your JWT is valid!');
+});
+
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
